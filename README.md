@@ -31,6 +31,22 @@ To keep old IDs from changing: don't delete or reorder questions in files alread
 published, and don't rename old files. (Fixing typos is fine.)
 The Vercel build log prints a WARNING for any question without exactly one bold answer.
 
+## Download links (Word files, PDFs, …)
+
+Put any file in the `downloads/` folder and it gets a download button on the
+**Downloads** page (`/downloads`, linked at the top of every page). The page
+and the menu link only appear when the folder has at least one file.
+
+- Online: on github.com open the `downloads` folder → **Add file → Upload files** →
+  commit. Vercel republishes in about a minute. (GitHub's web upload accepts files
+  up to 25 MB each.)
+- Offline: copy the file into the `downloads` folder and restart
+  `start-offline-server.bat`.
+
+The file name (without `.docx`) is shown on the page, so name files the way you
+want visitors to see them, e.g. `ቡቡዳጢ Questions Part 1.docx`. To remove a file,
+delete it from the folder.
+
 ## Getting indexed fast
 
 **Bing (also used by Windows Start search, DuckDuckGo, Yahoo, Ecosia, Copilot):**

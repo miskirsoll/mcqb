@@ -64,6 +64,22 @@ for (const f of files) {
 }
 console.log(`Loaded ${questions.length} questions from ${files.length} file(s)${problems ? `, ${problems} warning(s)` : ''}`);
 
+// ---------- downloadable files ----------
+// Every file in ./downloads is published under /downloads/<original name> and
+// listed on the Downloads page.
+const DOWNLOADS_DIR = path.join(ROOT, 'downloads');
+const downloads = (fs.existsSync(DOWNLOADS_DIR) ? fs.readdirSync(DOWNLOADS_DIR) : [])
+  .filter((f) => !f.startsWith('.') && !f.startsWith('~$') && fs.statSync(path.join(DOWNLOADS_DIR, f)).isFile())
+  .sort((a, b) => a.localeCompare(b))
+  .map((name) => ({
+    name,
+    title: path.basename(name, path.extname(name)),
+    ext: path.extname(name).slice(1).toUpperCase() || 'FILE',
+    size: fs.statSync(path.join(DOWNLOADS_DIR, name)).size,
+  }));
+const formatSize = (n) =>
+  n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : n >= 1024 ? `${Math.round(n / 1024)} KB` : `${n} bytes`;
+
 // ---------- templates ----------
 const verification = [
   process.env.GOOGLE_SITE_VERIFICATION &&
@@ -92,7 +108,7 @@ function layout({ title, description, canonical, body, jsonLd, noindex }) {
   ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>` : ''}
 </head>
 <body>
-  <header class="site-header"><div class="wrap"><a class="brand" href="/">${esc(config.siteName)}</a></div></header>
+  <header class="site-header"><div class="wrap"><a class="brand" href="/">${esc(config.siteName)}</a>${downloads.length ? '<nav class="nav"><a href="/">Questions</a><a href="/downloads">Downloads</a></nav>' : ''}</div></header>
   <main class="wrap">
 ${body}
   </main>
@@ -199,6 +215,24 @@ fs.cpSync(path.join(ROOT, 'static'), OUT, { recursive: true });
 
 write('index.html', homePage());
 questions.forEach((q, i) => write(`q/${q.num}.html`, questionPage(q, i)));
+if (downloads.length) {
+  fs.mkdirSync(path.join(OUT, 'downloads'), { recursive: true });
+  for (const d of downloads) fs.copyFileSync(path.join(DOWNLOADS_DIR, d.name), path.join(OUT, 'downloads', d.name));
+  write('downloads.html', layout({
+    title: truncate(`Downloads – ${config.siteName}`, TITLE_MAX),
+    description: truncate(`Download ${config.siteName} question files and documents to study offline: ${downloads.map((d) => d.title).join(', ')}.`, DESC_MAX),
+    canonical: `${SITE_URL}/downloads`,
+    body: `
+    <section class="hero">
+      <h1>Downloads</h1>
+      <p>${downloads.length} file${downloads.length === 1 ? '' : 's'} to download.</p>
+    </section>
+    <ul class="downloads">
+${downloads.map((d) => `      <li><span class="ftype">${esc(d.ext)}</span><span class="fname">${esc(d.title)}<span class="muted">${formatSize(d.size)}</span></span><a class="button" href="/downloads/${encodeURIComponent(d.name)}" download="${esc(d.name)}">Download</a></li>`).join('\n')}
+    </ul>`,
+  }));
+}
+
 write('404.html', layout({
   title: `Not found | ${config.siteName}`,
   description: 'Page not found',
@@ -209,7 +243,11 @@ write('404.html', layout({
 for (const w of lengthWarnings) console.warn(`WARNING ${w}`);
 
 const today = new Date().toISOString().slice(0, 10);
-const urls = [`${SITE_URL}/`, ...questions.map((q) => `${SITE_URL}/q/${q.num}`)];
+const urls = [
+  `${SITE_URL}/`,
+  ...(downloads.length ? [`${SITE_URL}/downloads`] : []),
+  ...questions.map((q) => `${SITE_URL}/q/${q.num}`),
+];
 write('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 ${urls.map((u) => `  <url><loc>${u}</loc><lastmod>${today}</lastmod></url>`).join('\n')}
