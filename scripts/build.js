@@ -73,7 +73,7 @@ const downloads = (fs.existsSync(DOWNLOADS_DIR) ? fs.readdirSync(DOWNLOADS_DIR) 
   .sort((a, b) => a.localeCompare(b))
   .map((name) => ({
     name,
-    title: path.basename(name, path.extname(name)),
+    title: path.basename(name, path.extname(name)).replace(/_/g, ' '),
     ext: path.extname(name).slice(1).toUpperCase() || 'FILE',
     size: fs.statSync(path.join(DOWNLOADS_DIR, name)).size,
   }));
