@@ -22,7 +22,20 @@ const SITE_URL = (
 
 const esc = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const truncate = (s, n) => (s.length > n ? s.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : s);
+const truncate = (s, n) => (s.length > n ? s.slice(0, n - 1).replace(/[\s,;:.–-]+\S*$/, '') + '…' : s);
+
+// Bing/Google show ~60 characters of a title and ~155 of a description;
+// Bing Webmaster Tools flags anything longer (or a description under ~25).
+const TITLE_MAX = 60;
+const DESC_MIN = 50;
+const DESC_MAX = 155;
+const lengthWarnings = [];
+function checkLengths(page, title, description) {
+  if (title.length > TITLE_MAX) lengthWarnings.push(`${page}: title is ${title.length} characters`);
+  if (description.length < DESC_MIN || description.length > DESC_MAX) {
+    lengthWarnings.push(`${page}: description is ${description.length} characters`);
+  }
+}
 const pad = (n) => String(n).padStart(config.idDigits, '0');
 const write = (rel, content) => {
   const file = path.join(OUT, rel);
@@ -55,7 +68,8 @@ const verification = [
   process.env.BING_SITE_VERIFICATION && `<meta name="msvalidate.01" content="${esc(process.env.BING_SITE_VERIFICATION)}">`,
 ].filter(Boolean).join('\n  ');
 
-function layout({ title, description, canonical, body, jsonLd }) {
+function layout({ title, description, canonical, body, jsonLd, noindex }) {
+  if (!noindex) checkLengths(canonical, title, description);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -63,7 +77,7 @@ function layout({ title, description, canonical, body, jsonLd }) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${esc(title)}</title>
   <meta name="description" content="${esc(description)}">
-  <link rel="canonical" href="${canonical}">
+  <link rel="canonical" href="${canonical}">${noindex ? '\n  <meta name="robots" content="noindex">' : ''}
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="${esc(config.siteName)}">
   <meta property="og:title" content="${esc(title)}">
@@ -125,8 +139,8 @@ ${q.options.map((o) => `        <li class="option${o.correct ? ' correct' : ''}"
     },
   };
   return layout({
-    title: `${q.id} – ${truncate(q.question, 70)} | ${config.siteName}`,
-    description: truncate(`${q.id}: ${q.question} ${optionsText}`, 300),
+    title: truncate(`${q.id} – ${q.question}`, TITLE_MAX),
+    description: truncate(`${q.id}: ${q.question} ${optionsText}`, DESC_MAX),
     canonical: url,
     body,
     jsonLd,
@@ -171,8 +185,8 @@ ${items}
       })();
     </script>`;
   return layout({
-    title: `${config.siteName} – ${config.description}`,
-    description: `${config.description} ${questions.length} questions, each with its own ID (${config.idPrefix}${pad(1)}, ${config.idPrefix}${pad(2)}, …).`,
+    title: truncate(`${config.siteName} – ${config.title}`, TITLE_MAX),
+    description: truncate(`${config.description} ${questions.length} questions, each with its own ID (${config.idPrefix}${pad(1)}, ${config.idPrefix}${pad(2)}, …).`, DESC_MAX),
     canonical: `${SITE_URL}/`,
     body,
     jsonLd: { '@context': 'https://schema.org', '@type': 'WebSite', name: config.siteName, url: SITE_URL + '/' },
@@ -190,7 +204,9 @@ write('404.html', layout({
   description: 'Page not found',
   canonical: `${SITE_URL}/`,
   body: `<section class="hero"><h1>Page not found</h1><p><a href="/">Back to all questions</a></p></section>`,
+  noindex: true,
 }));
+for (const w of lengthWarnings) console.warn(`WARNING ${w}`);
 
 const today = new Date().toISOString().slice(0, 10);
 const urls = [`${SITE_URL}/`, ...questions.map((q) => `${SITE_URL}/q/${q.num}`)];

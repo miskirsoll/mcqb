@@ -60,5 +60,5 @@ npm run dev          # builds and serves on http://localhost:3000
 
 ## Settings
 
-`site.config.json` holds the site name, ID prefix, number of digits in IDs, and
+`site.config.json` holds the site name, home page title and description, ID prefix, number of digits in IDs, and
 the IndexNow key (the same key must stay in place once in use).
