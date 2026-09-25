@@ -7,7 +7,7 @@ A question-bank website. Every multiple-choice question gets its own page and ID
 - Home page with a search box: `https://<your-project>.vercel.app/`
 - Sitemap: `/sitemap.xml` · robots: `/robots.txt`
 
-No dependencies — just Node.js (Vercel has it).
+No dependencies — just Node.js (Vercel has it). Works offline on a local network too.
 
 ## Deploy on Vercel (one time)
 
@@ -51,11 +51,32 @@ deploy. For even better results:
 4. For the most important pages, paste the URL in the top search bar (**URL inspection**)
    and click **Request indexing** (Google limits this to a handful per day).
 
+## Using it with no internet (local network / Wi-Fi)
+
+One computer runs the site; every phone or computer on the same Wi-Fi or
+network cable can open it. No internet is needed — fonts are bundled.
+
+One-time setup on the computer that will host it (while you have internet,
+or copy the installer on a USB stick):
+1. Install Node.js (LTS) from https://nodejs.org.
+2. Download this repository (GitHub → Code → Download ZIP) and unzip it.
+
+Each time:
+1. Double-click `start-offline-server.bat` (Windows) or run `./start-offline-server.sh` (Mac/Linux).
+2. If Windows Firewall asks, tick **Private networks** and click **Allow access**.
+3. The window shows the address, e.g. `http://192.168.1.20:8080`.
+   Type that address in the browser on the other phones/computers.
+4. Keep the window open while people use the site. Close it to stop.
+
+Tips: set your Wi-Fi as a **Private** network in Windows, otherwise the firewall
+may block the others. A phone hotspot works too — no mobile data is used for
+the site. To add questions offline, drop the .docx into `questions/` and restart.
+
 ## Local preview
 
 ```
 npm run build        # builds into public/
-npm run dev          # builds and serves on http://localhost:3000
+npm start            # builds and serves on http://localhost:8080 and your local network
 ```
 
 ## Settings
