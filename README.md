@@ -13,7 +13,7 @@ No dependencies — just Node.js (Vercel has it).
 
 1. Go to https://vercel.com/new and import this GitHub repository.
 2. Leave all settings as they are (they come from `vercel.json`) and click **Deploy**.
-3. The site's address is filled in automatically from your Vercel project domain.
+3. The site address is set in `site.config.json` (`siteUrl`); change it there if the domain changes.
    If you ever change the domain, you can force it with an environment variable
    `SITE_URL` (e.g. `https://bubudati.vercel.app`).
 
@@ -60,5 +60,5 @@ npm run dev          # builds and serves on http://localhost:3000
 
 ## Settings
 
-`site.config.json` holds the site name, home page title and description, ID prefix, number of digits in IDs, and
+`site.config.json` holds the public site address (`siteUrl`), the site name, home page title and description, ID prefix, number of digits in IDs, and
 the IndexNow key (the same key must stay in place once in use).

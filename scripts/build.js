@@ -14,8 +14,11 @@ const ROOT = path.join(__dirname, '..');
 const OUT = path.join(ROOT, 'public');
 const config = require(path.join(ROOT, 'site.config.json'));
 
+// siteUrl in site.config.json is the public address used in canonical links,
+// the sitemap and IndexNow. SITE_URL (env) overrides it, e.g. for local testing.
 const SITE_URL = (
   process.env.SITE_URL ||
+  config.siteUrl ||
   (process.env.VERCEL_PROJECT_PRODUCTION_URL && `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) ||
   'http://localhost:3000'
 ).replace(/\/+$/, '');
