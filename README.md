@@ -31,6 +31,23 @@ To keep old IDs from changing: don't delete or reorder questions in files alread
 published, and don't rename old files. (Fixing typos is fine.)
 The Vercel build log prints a WARNING for any question without exactly one bold answer.
 
+## Sharing through a shared folder (other VLANs, no server)
+
+If other VLANs can't reach the local server (ports blocked), use a shared
+folder instead — Windows file sharing is almost always allowed inside an
+organization, and no server or open port is needed.
+
+1. Double-click `make-shared-folder.bat` (or run `npm run build:folder`).
+   It creates the folder `shared-folder-site` and opens it.
+2. Copy the whole `shared-folder-site` folder to a shared drive, e.g.
+   `\\fileserver\share\ቡቡዳጢ`.
+3. People open `\\fileserver\share\ቡቡዳጢ\index.html` in their browser
+   (tip: create a desktop shortcut to it for them).
+
+Questions, search, next/previous and the Downloads page all work. After
+adding questions or files, run `make-shared-folder.bat` again and copy the
+folder again (replace the old one).
+
 ## Download links (Word files, PDFs, …)
 
 Put any file in the `downloads/` folder and it gets a download button on the

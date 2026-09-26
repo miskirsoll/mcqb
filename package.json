@@ -4,7 +4,8 @@
   "scripts": {
     "build": "node scripts/build.js",
     "serve": "node scripts/serve.js",
-    "start": "node scripts/build.js && node scripts/serve.js"
+    "start": "node scripts/build.js && node scripts/serve.js",
+    "build:folder": "node scripts/build.js --folder"
   },
   "engines": {
     "node": ">=18"

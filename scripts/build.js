@@ -1,5 +1,9 @@
 // Builds the static site into ./public from every .docx file in ./questions.
 //
+// With --folder it instead builds ./shared-folder-site: a copy whose links
+// work when opened straight from disk or a network share (\\server\share),
+// with no web server at all.
+//
 // Question IDs are assigned in order: files are read alphabetically by name,
 // and questions keep their order inside each file. To keep existing IDs
 // stable, only ever ADD new files with a name that sorts after the old ones
@@ -11,7 +15,8 @@ const https = require('https');
 const { parseDocx } = require('./docx');
 
 const ROOT = path.join(__dirname, '..');
-const OUT = path.join(ROOT, 'public');
+const FOLDER = process.argv.includes('--folder');
+const OUT = path.join(ROOT, FOLDER ? 'shared-folder-site' : 'public');
 const config = require(path.join(ROOT, 'site.config.json'));
 
 // siteUrl in site.config.json is the public address used in canonical links,
@@ -39,6 +44,16 @@ function checkLengths(page, title, description) {
     lengthWarnings.push(`${page}: description is ${description.length} characters`);
   }
 }
+// Links: on the web they are absolute and extensionless (/q/001); in folder
+// mode they are relative to the page and point at the .html file.
+const linker = (depth) => {
+  const root = FOLDER ? '../'.repeat(depth) : '/';
+  return {
+    file: (p) => root + p,
+    page: (p) => root + p + (FOLDER ? '.html' : ''),
+    home: FOLDER ? root + 'index.html' : '/',
+  };
+};
 const pad = (n) => String(n).padStart(config.idDigits, '0');
 const write = (rel, content) => {
   const file = path.join(OUT, rel);
@@ -87,8 +102,9 @@ const verification = [
   process.env.BING_SITE_VERIFICATION && `<meta name="msvalidate.01" content="${esc(process.env.BING_SITE_VERIFICATION)}">`,
 ].filter(Boolean).join('\n  ');
 
-function layout({ title, description, canonical, body, jsonLd, noindex }) {
+function layout({ title, description, canonical, body, jsonLd, noindex, depth = 0 }) {
   if (!noindex) checkLengths(canonical, title, description);
+  const L = linker(depth);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -103,12 +119,12 @@ function layout({ title, description, canonical, body, jsonLd, noindex }) {
   <meta property="og:description" content="${esc(description)}">
   <meta property="og:url" content="${canonical}">
   ${verification}
-  <link rel="stylesheet" href="/style.css">
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="${L.file('style.css')}">
+  <link rel="icon" href="${L.file('favicon.svg')}" type="image/svg+xml">
   ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>` : ''}
 </head>
 <body>
-  <header class="site-header"><div class="wrap"><a class="brand" href="/">${esc(config.siteName)}</a>${downloads.length ? '<nav class="nav"><a href="/">Questions</a><a href="/downloads">Downloads</a></nav>' : ''}</div></header>
+  <header class="site-header"><div class="wrap"><a class="brand" href="${L.home}">${esc(config.siteName)}</a>${downloads.length ? `<nav class="nav"><a href="${L.home}">Questions</a><a href="${L.page('downloads')}">Downloads</a></nav>` : ''}</div></header>
   <main class="wrap">
 ${body}
   </main>
@@ -124,8 +140,9 @@ function questionPage(q, i) {
   const prev = questions[i - 1];
   const next = questions[i + 1];
   const optionsText = q.options.map((o) => `${o.letter}. ${o.text}`).join(' ');
+  const L = linker(1);
   const body = `
-    <nav class="crumbs"><a href="/">${esc(config.siteName)}</a> › ${esc(q.id)}</nav>
+    <nav class="crumbs"><a href="${L.home}">${esc(config.siteName)}</a> › ${esc(q.id)}</nav>
     <article class="card">
       <p class="qid">${esc(q.id)}</p>
       <h1 class="question">${esc(q.question)}</h1>
@@ -135,8 +152,8 @@ ${q.options.map((o) => `        <li class="option${o.correct ? ' correct' : ''}"
       ${correct ? `<p class="answer"><strong>Answer:</strong> ${esc(correct.letter)}. ${esc(correct.text)}</p>` : ''}
     </article>
     <nav class="pager">
-      ${prev ? `<a href="/q/${prev.num}" rel="prev">← ${esc(prev.id)}</a>` : '<span></span>'}
-      ${next ? `<a href="/q/${next.num}" rel="next">${esc(next.id)} →</a>` : '<span></span>'}
+      ${prev ? `<a href="${L.page(`q/${prev.num}`)}" rel="prev">← ${esc(prev.id)}</a>` : '<span></span>'}
+      ${next ? `<a href="${L.page(`q/${next.num}`)}" rel="next">${esc(next.id)} →</a>` : '<span></span>'}
     </nav>`;
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -160,12 +177,14 @@ ${q.options.map((o) => `        <li class="option${o.correct ? ' correct' : ''}"
     canonical: url,
     body,
     jsonLd,
+    depth: 1,
   });
 }
 
 function homePage() {
+  const L = linker(0);
   const items = questions.map((q) =>
-    `        <li data-s="${esc((q.id + ' ' + q.num + ' ' + q.question).toLowerCase())}"><a href="/q/${q.num}"><span class="qid">${esc(q.id)}</span> ${esc(q.question)}</a></li>`,
+    `        <li data-s="${esc((q.id + ' ' + q.num + ' ' + q.question).toLowerCase())}"><a href="${L.page(`q/${q.num}`)}"><span class="qid">${esc(q.id)}</span> ${esc(q.question)}</a></li>`,
   ).join('\n');
   const body = `
     <section class="hero">
@@ -228,7 +247,7 @@ if (downloads.length) {
       <p>${downloads.length} file${downloads.length === 1 ? '' : 's'} to download.</p>
     </section>
     <ul class="downloads">
-${downloads.map((d) => `      <li><span class="ftype">${esc(d.ext)}</span><span class="fname">${esc(d.title)}<span class="muted">${formatSize(d.size)}</span></span><a class="button" href="/downloads/${encodeURIComponent(d.name)}" download="${esc(d.name)}">Download</a></li>`).join('\n')}
+${downloads.map((d) => `      <li><span class="ftype">${esc(d.ext)}</span><span class="fname">${esc(d.title)}<span class="muted">${formatSize(d.size)}</span></span><a class="button" href="${linker(0).file(`downloads/${encodeURIComponent(d.name)}`)}" download="${esc(d.name)}">Download</a></li>`).join('\n')}
     </ul>`,
   }));
 }
@@ -237,10 +256,22 @@ write('404.html', layout({
   title: `Not found | ${config.siteName}`,
   description: 'Page not found',
   canonical: `${SITE_URL}/`,
-  body: `<section class="hero"><h1>Page not found</h1><p><a href="/">Back to all questions</a></p></section>`,
+  body: `<section class="hero"><h1>Page not found</h1><p><a href="${linker(0).home}">Back to all questions</a></p></section>`,
   noindex: true,
 }));
 for (const w of lengthWarnings) console.warn(`WARNING ${w}`);
+
+if (FOLDER) {
+  // Browsers refuse to load font files from disk/network shares (file://), so
+  // embed them in the stylesheet instead.
+  const css = path.join(OUT, 'style.css');
+  fs.writeFileSync(css, fs.readFileSync(css, 'utf8').replace(/url\("fonts\/([^"]+)"\)/g, (_, f) =>
+    `url("data:font/woff2;base64,${fs.readFileSync(path.join(OUT, 'fonts', f)).toString('base64')}")`));
+  fs.rmSync(path.join(OUT, 'fonts'), { recursive: true, force: true });
+  fs.rmSync(path.join(OUT, 'BingSiteAuth.xml'), { force: true });
+  console.log(`Wrote the shared-folder copy to shared-folder-site/ (${questions.length} questions). Open index.html in it.`);
+  process.exit(0);
+}
 
 const today = new Date().toISOString().slice(0, 10);
 const urls = [
