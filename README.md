@@ -17,6 +17,16 @@ No dependencies — just Node.js (Vercel has it). Works offline on a local netwo
    If you ever change the domain, you can force it with an environment variable
    `SITE_URL` (e.g. `https://bubudati.vercel.app`).
 
+## Taking the site offline temporarily (maintenance mode)
+
+1. Vercel → your project → **Settings → Environment Variables** → add
+   `MAINTENANCE` with value `1` (Production) → Save.
+2. **Deployments** → on the latest deployment click **⋯ → Redeploy**.
+   Every page now shows "Temporarily unavailable"; questions and download
+   files are no longer published.
+3. To bring it back: delete the `MAINTENANCE` variable (or set it to `0`)
+   and **Redeploy** again.
+
 ## Adding more questions
 
 1. Put the new Word file in the `questions/` folder, with a name that sorts **after**

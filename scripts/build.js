@@ -232,6 +232,24 @@ ${items}
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.cpSync(path.join(ROOT, 'static'), OUT, { recursive: true });
 
+// Maintenance mode: set the environment variable MAINTENANCE=1 (e.g. in Vercel →
+// Settings → Environment Variables) and redeploy. Every page then shows a
+// "temporarily unavailable" notice and no questions or files are published.
+if (/^(1|true|on|yes)$/i.test(process.env.MAINTENANCE || '')) {
+  const page = layout({
+    title: `${config.siteName} – temporarily unavailable`,
+    description: 'This site is temporarily unavailable. Please check back later.',
+    canonical: `${SITE_URL}/`,
+    body: `<section class="hero"><h1>Temporarily unavailable</h1><p>${esc(config.siteName)} is closed for now. Please check back later.</p></section>`,
+    noindex: true,
+  }).replace(/<nav class="nav">[\s\S]*?<\/nav>/, '').replace(/<footer[\s\S]*?<\/footer>/, '');
+  write('index.html', page);
+  write('404.html', page);
+  write('robots.txt', 'User-agent: *\nDisallow:\n');
+  console.log('MAINTENANCE mode: published only a "temporarily unavailable" page.');
+  process.exit(0);
+}
+
 write('index.html', homePage());
 questions.forEach((q, i) => write(`q/${q.num}.html`, questionPage(q, i)));
 if (downloads.length) {
